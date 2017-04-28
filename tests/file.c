@@ -1,42 +1,91 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <string.h>
-
 typedef struct directory_entry DIR;
+typedef struct bpb BPB;
 
 struct directory_entry{
 	char DIR_Name[11]; //“Short”  file  name  limited  to  11  characters
 	char DIR_Attr;
-	char DIR_NTRes; //Reserved. Must be set to 0. 
+	char DIR_NTRes; //Reserved. Must be set to 0.
 	char DIR_CrtTimeTenth;
-	char DIR_CrtTime[2]; //Creation time. Granularity is 2 seconds. 
+	char DIR_CrtTime[2]; //Creation time. Granularity is 2 seconds.
 	char DIR_CrtDate[2];
-	char DIR_LstAccDat[2]; //Last access date. 
+	char DIR_LstAccDat[2]; //Last access date.
 	char DIR_FstClusH[2];
 	char DIR_WrtTime [2];
 	char DIR_WrtDate[2];
 	char DIR_FstClusL[2];
-	char DIR_FileSize[4]; //32-bit  quantity  containing  size  in  bytes  of file/directory described by this entry. 
+	char DIR_FileSize[4]; //32-bit  quantity  containing  size  in  bytes  of file/directory described by this entry.
+};
+struct bpb{
+	char BS_jmpBoot[3];
+	char BS_OEMName[8];
+	unsigned short int  BPB_BytsPerSec;
+	char BPB_SecPerClus;
+	short int BPB_RsvdSecCnt;
+	char BPB_NumFATs;
+	unsigned short int BPB_RootEntCnt;
+	short int BPB_TotSec16;
+	char BPB_Media;
+	unsigned short int BPB_FATSz16;
+	unsigned short int BPB_SecPerTrk;
+	unsigned short int BPB_NumHeads;
+	unsigned int BPB_HiddSec;
+	unsigned int BPB_TotSec32;
+	char BS_DrvNum;
+	char BS_Reserved1;
+	char BS_BootSig;
+	unsigned int BS_VolID;
+	char BS_VolLab[11];
+	char BS_FilSysType[8];
+
 };
 
+typedef struct {
+    size_t bytes_per_sector;
+    size_t sectors_per_cluster;
+    size_t reserved_sectors;
+    size_t number_of_fats;
+    size_t root_entries;
+    size_t sectors_per_fat;
+} boot_sector_t;
+
+typedef struct {
+    unsigned char name[9];
+    unsigned char ext[4];
+    unsigned char full_name[14];
+    unsigned char attr;
+    size_t begin_cluster;
+    size_t size;
+    record_type_t type;
+} dir_record_t;
+
+void read_boot_sector(int fd, boot_sector_t * bsector) {
+    lseek(fd, 0xB, SEEK_SET);
+    read(fd, &bsector->bytes_per_sector, 2);
+    lseek(fd, 0xD, SEEK_SET);
+    read(fd, &bsector->sectors_per_cluster, 1);
+    lseek(fd, 0xE, SEEK_SET);
+    read(fd, &bsector->reserved_sectors, 2);
+    lseek(fd, 0x10, SEEK_SET);
+    read(fd, &bsector->number_of_fats, 1);
+    lseek(fd, 0x11, SEEK_SET);
+    read(fd, &bsector->root_entries, 2);
+    lseek(fd, 0x16, SEEK_SET);
+    read(fd, &bsector->sectors_per_fat, 2);
+}
 
 void main(){
-	FILE *imagem = fopen("fat16.img", "rb");
-	//char c;
+	int imagem = open("../../fat16.img", O_RDONLY);
 	printf("iniciando...\n");
-	DIR node;
-	/*do{
-		c = getc(imagem);
-		printf("%c" , c);    
-	}while (c != EOF);
-	* 
-	*/
-	fread(&node,sizeof(DIR),1,imagem);
-	for(int i=0;i<4;i++){
-		//printf("%c",node.DIR_Attr[i]);
-	}
-	printf("%c",node.DIR_CrtTimeTenth);
-	
-	printf("\n");
-	fclose(imagem);
+	boot_sector_t *bs = (boot_sector_t*) calloc(1,sizeof(boot_sector_t));
+	read_boot_sector(imagem,bs);
+	printf("%d\n",bs->root_entries);
+	dir_record_t *diretorio = (dir_record_t*) calloc(1,sizeof(dir_record_t));
+
 }
