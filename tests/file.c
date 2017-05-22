@@ -8,6 +8,14 @@
 typedef struct directory_entry DIR;
 typedef struct bpb BPB;
 
+
+#define ATTR_READ_ONLY 0x01
+#define ATTR_HIDDEN 0x02
+#define ATTR_SYSTEM 0x04
+#define ATTR_VOLUME_ID 0x08
+#define ATTR_DIRECTORY 0x10
+#define ATTR_ARCHIVE 0x20
+
 struct directory_entry{
 	char DIR_Name[11]; //“Short”  file  name  limited  to  11  characters
 	char DIR_Attr;
@@ -57,18 +65,7 @@ typedef struct {
     size_t root_entries;
     size_t sectors_per_fat;
 		size_t fat_sz;
-		char dir_name[11];
 } boot_sector_t;
-
-// typedef struct {
-//     unsigned char name[9];
-//     unsigned char ext[4];
-//     unsigned char full_name[14];
-//     unsigned char attr;
-//     size_t begin_cluster;
-//     size_t size;
-//     record_type_t type;
-// } dir_record_t;
 
 void read_boot_sector(int fd, boot_sector_t * bsector) {
 		lseek(fd, 3, SEEK_SET);
@@ -88,22 +85,46 @@ void read_boot_sector(int fd, boot_sector_t * bsector) {
 		lseek(fd, 22, SEEK_SET);
     read(fd, &bsector->fat_sz, 2);
 
-		lseek(fd, 136, SEEK_SET);
-    read(fd, &bsector->dir_name,11);
 }
 
+void read_data(int fd, DIR *diretorio,int pos){
+	lseek(fd,pos, SEEK_SET);
+	read(fd, &diretorio->DIR_Name,11);
+	lseek(fd,pos+11, SEEK_SET);
+	read(fd, &diretorio->DIR_Attr,1);
+
+}
 
 
 void main(){
 	int imagem = open("../../fat16.img", O_RDWR);
 	printf("iniciando...\n");
 	boot_sector_t *bs = (boot_sector_t*) calloc(1,sizeof(boot_sector_t));
+	DIR *diretorio = (DIR*) calloc(1,sizeof(DIR));
 	read_boot_sector(imagem,bs);
 
+	int dir_raiz = (bs->number_of_fats * bs->fat_sz) + 1;
+
+
 	int root = ((bs->root_entries * 32) + (bs->bytes_per_sector -1))/bs->bytes_per_sector;
-	int first_data_sector = 16 + (bs->number_of_fats * bs->fat_sz);
+	int first_data_sector;
+	printf("raiz: %d\n",dir_raiz);
 	printf("Root: %d\n",root);
-	printf("data:%d\n",first_data_sector);
+	// printf("data:%d\n",first_data_sector);
 	// dir_record_t *diretorio = (dir_record_t*) calloc(1,sizeof(dir_record_t));
-	printf("%s\n",bs->dir_name );
+	printf("%d\n",bs->fat_sz);
+	printf("%d\n",bs->number_of_fats);
+	printf("BPS: %d\n",bs->bytes_per_sector);
+
+	int proximo = 32;
+
+	read_data(imagem,diretorio,512*dir_raiz);
+
+	while(diretorio->DIR_Attr == ATTR_DIRECTORY || diretorio->DIR_Attr == ATTR_ARCHIVE){
+		printf("name:%s\n",diretorio->DIR_Name);
+		read_data(imagem,diretorio,512*dir_raiz+proximo);
+		proximo+=32;
+	}
+
+
 }
