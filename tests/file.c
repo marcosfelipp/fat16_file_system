@@ -46,46 +46,64 @@ struct bpb{
 
 };
 
+
+// size_t -> unsigned int de 2 byetes
 typedef struct {
-    size_t bytes_per_sector;
+		char fat_name[8];
+		size_t bytes_per_sector;
     size_t sectors_per_cluster;
     size_t reserved_sectors;
     size_t number_of_fats;
     size_t root_entries;
     size_t sectors_per_fat;
+		size_t fat_sz;
+		char dir_name[11];
 } boot_sector_t;
 
-typedef struct {
-    unsigned char name[9];
-    unsigned char ext[4];
-    unsigned char full_name[14];
-    unsigned char attr;
-    size_t begin_cluster;
-    size_t size;
-    record_type_t type;
-} dir_record_t;
+// typedef struct {
+//     unsigned char name[9];
+//     unsigned char ext[4];
+//     unsigned char full_name[14];
+//     unsigned char attr;
+//     size_t begin_cluster;
+//     size_t size;
+//     record_type_t type;
+// } dir_record_t;
 
 void read_boot_sector(int fd, boot_sector_t * bsector) {
-    lseek(fd, 0xB, SEEK_SET);
+		lseek(fd, 3, SEEK_SET);
+		read(fd, &bsector->fat_name, 8);
+		lseek(fd, 11, SEEK_SET);
     read(fd, &bsector->bytes_per_sector, 2);
-    lseek(fd, 0xD, SEEK_SET);
+    lseek(fd, 13, SEEK_SET);
     read(fd, &bsector->sectors_per_cluster, 1);
-    lseek(fd, 0xE, SEEK_SET);
+    lseek(fd, 14, SEEK_SET);
     read(fd, &bsector->reserved_sectors, 2);
-    lseek(fd, 0x10, SEEK_SET);
+    lseek(fd, 16, SEEK_SET);
     read(fd, &bsector->number_of_fats, 1);
-    lseek(fd, 0x11, SEEK_SET);
+    lseek(fd, 17, SEEK_SET);
     read(fd, &bsector->root_entries, 2);
-    lseek(fd, 0x16, SEEK_SET);
+    lseek(fd, 19, SEEK_SET);
     read(fd, &bsector->sectors_per_fat, 2);
+		lseek(fd, 22, SEEK_SET);
+    read(fd, &bsector->fat_sz, 2);
+
+		lseek(fd, 136, SEEK_SET);
+    read(fd, &bsector->dir_name,11);
 }
 
+
+
 void main(){
-	int imagem = open("../../fat16.img", O_RDONLY);
+	int imagem = open("../../fat16.img", O_RDWR);
 	printf("iniciando...\n");
 	boot_sector_t *bs = (boot_sector_t*) calloc(1,sizeof(boot_sector_t));
 	read_boot_sector(imagem,bs);
-	printf("%d\n",bs->root_entries);
-	dir_record_t *diretorio = (dir_record_t*) calloc(1,sizeof(dir_record_t));
 
+	int root = ((bs->root_entries * 32) + (bs->bytes_per_sector -1))/bs->bytes_per_sector;
+	int first_data_sector = 16 + (bs->number_of_fats * bs->fat_sz);
+	printf("Root: %d\n",root);
+	printf("data:%d\n",first_data_sector);
+	// dir_record_t *diretorio = (dir_record_t*) calloc(1,sizeof(dir_record_t));
+	printf("%s\n",bs->dir_name );
 }

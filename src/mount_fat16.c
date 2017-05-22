@@ -20,7 +20,7 @@ void *fat16_init(struct fuse_conn_info *conn)
 {
   log_msg("Chamando init\n");
 
-  // Your code here 
+  // Your code here
 
   return NULL;
 }
@@ -28,7 +28,7 @@ void *fat16_init(struct fuse_conn_info *conn)
 void fat16_destroy(void *data)
 {
   log_msg("Chamando destroy\n");
-  
+
   // Your code here
 }
 
@@ -45,12 +45,17 @@ struct fuse_operations fat16_oper = {
 int main(int argc, char *argv[])
 {
   int ret;
-  
   log_open();
-
   ret = fuse_main(argc, argv, &fat16_oper, NULL);
-
   log_msg("ret: %d\n", ret);
+
+  int imagem = open("../../fat16.img", O_RDWR);
+  if(filedesc < 0){
+    log_msg("Erro ao abrir o arquivo passado como parametro\n");
+    exit(0);
+  }
+  log_msg("Iniciando\n");
+  
 
   return ret;
 }
