@@ -15,6 +15,7 @@ typedef struct bpb BPB;
 #define ATTR_VOLUME_ID 0x08
 #define ATTR_DIRECTORY 0x10
 #define ATTR_ARCHIVE 0x20
+// size_t -> unsigned int de 2 bytes
 
 struct directory_entry{
 	char DIR_Name[11]; //“Short”  file  name  limited  to  11  characters
@@ -27,7 +28,7 @@ struct directory_entry{
 	char DIR_FstClusH[2];
 	char DIR_WrtTime [2];
 	char DIR_WrtDate[2];
-	char DIR_FstClusL[2];
+	size_t DIR_FstClusL;
 	char DIR_FileSize[4]; //32-bit  quantity  containing  size  in  bytes  of file/directory described by this entry.
 };
 struct bpb{
@@ -54,23 +55,31 @@ struct bpb{
 
 };
 
-
-// size_t -> unsigned int de 2 byetes
 typedef struct {
-		char fat_name[8];
-		size_t bytes_per_sector;
+    size_t offset_to_fat;
+    size_t size_of_fat;
+    size_t offset_to_root_dir;
+    size_t size_of_root_dir;
+    size_t offset_to_clusters;
+    size_t size_of_cluster;
+} fs_info_t;
+
+
+typedef struct {
+	char fat_name[8];
+	size_t bytes_per_sector;
     size_t sectors_per_cluster;
     size_t reserved_sectors;
     size_t number_of_fats;
     size_t root_entries;
     size_t sectors_per_fat;
-		size_t fat_sz;
+	size_t fat_sz;
 } boot_sector_t;
 
 void read_boot_sector(int fd, boot_sector_t * bsector) {
-		lseek(fd, 3, SEEK_SET);
-		read(fd, &bsector->fat_name, 8);
-		lseek(fd, 11, SEEK_SET);
+	lseek(fd, 3, SEEK_SET);
+	read(fd, &bsector->fat_name, 8);
+	lseek(fd, 11, SEEK_SET);
     read(fd, &bsector->bytes_per_sector, 2);
     lseek(fd, 13, SEEK_SET);
     read(fd, &bsector->sectors_per_cluster, 1);
@@ -82,7 +91,7 @@ void read_boot_sector(int fd, boot_sector_t * bsector) {
     read(fd, &bsector->root_entries, 2);
     lseek(fd, 19, SEEK_SET);
     read(fd, &bsector->sectors_per_fat, 2);
-		lseek(fd, 22, SEEK_SET);
+	lseek(fd, 22, SEEK_SET);
     read(fd, &bsector->fat_sz, 2);
 
 }
@@ -92,7 +101,8 @@ void read_data(int fd, DIR *diretorio,int pos){
 	read(fd, &diretorio->DIR_Name,11);
 	lseek(fd,pos+11, SEEK_SET);
 	read(fd, &diretorio->DIR_Attr,1);
-
+	lseek(fd,pos+26, SEEK_SET);
+	read(fd, &diretorio->DIR_FstClusL,2);
 }
 
 
@@ -102,29 +112,37 @@ void main(){
 	boot_sector_t *bs = (boot_sector_t*) calloc(1,sizeof(boot_sector_t));
 	DIR *diretorio = (DIR*) calloc(1,sizeof(DIR));
 	read_boot_sector(imagem,bs);
-
+	printf("Numero de entadas diretorio raiz: %d\n",bs->root_entries);
 	int dir_raiz = (bs->number_of_fats * bs->fat_sz) + 1;
+	printf("sectors_per_cluster%d\n",bs->sectors_per_cluster);
 
 
 	int root = ((bs->root_entries * 32) + (bs->bytes_per_sector -1))/bs->bytes_per_sector;
-	int first_data_sector;
+	int first_data_sector = bs->reserved_sectors + (bs->number_of_fats * bs->fat_sz) + root;
+
+
 	printf("raiz: %d\n",dir_raiz);
-	printf("Root: %d\n",root);
-	// printf("data:%d\n",first_data_sector);
-	// dir_record_t *diretorio = (dir_record_t*) calloc(1,sizeof(dir_record_t));
-	printf("%d\n",bs->fat_sz);
-	printf("%d\n",bs->number_of_fats);
-	printf("BPS: %d\n",bs->bytes_per_sector);
+	printf("data:%d\n",first_data_sector);
 
 	int proximo = 32;
 
 	read_data(imagem,diretorio,512*dir_raiz);
+	printf("name:%s   ",diretorio->DIR_Name);
+	printf("First cluster:%d\n",diretorio->DIR_FstClusL);
 
 	while(diretorio->DIR_Attr == ATTR_DIRECTORY || diretorio->DIR_Attr == ATTR_ARCHIVE){
-		printf("name:%s\n",diretorio->DIR_Name);
 		read_data(imagem,diretorio,512*dir_raiz+proximo);
+		printf("Name:%s   ",diretorio->DIR_Name);
+		printf("First cluster:%d\n",diretorio->DIR_FstClusL);
 		proximo+=32;
 	}
 
+
+	int fl = 157 * 512;
+	read_data(imagem,diretorio,fl+64);
+	printf("Name:%s   ",diretorio->DIR_Name);
+	printf("First cluster:%d\n",diretorio->DIR_FstClusL);
+
+	
 
 }
