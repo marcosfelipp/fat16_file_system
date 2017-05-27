@@ -31,39 +31,6 @@ struct directory_entry{
 	size_t DIR_FstClusL;
 	char DIR_FileSize[4]; //32-bit  quantity  containing  size  in  bytes  of file/directory described by this entry.
 };
-struct bpb{
-	char BS_jmpBoot[3];
-	char BS_OEMName[8];
-	unsigned short int  BPB_BytsPerSec;
-	char BPB_SecPerClus;
-	short int BPB_RsvdSecCnt;
-	char BPB_NumFATs;
-	unsigned short int BPB_RootEntCnt;
-	short int BPB_TotSec16;
-	char BPB_Media;
-	unsigned short int BPB_FATSz16;
-	unsigned short int BPB_SecPerTrk;
-	unsigned short int BPB_NumHeads;
-	unsigned int BPB_HiddSec;
-	unsigned int BPB_TotSec32;
-	char BS_DrvNum;
-	char BS_Reserved1;
-	char BS_BootSig;
-	unsigned int BS_VolID;
-	char BS_VolLab[11];
-	char BS_FilSysType[8];
-
-};
-
-typedef struct {
-    size_t offset_to_fat;
-    size_t size_of_fat;
-    size_t offset_to_root_dir;
-    size_t size_of_root_dir;
-    size_t offset_to_clusters;
-    size_t size_of_cluster;
-} fs_info_t;
-
 
 typedef struct {
 	char fat_name[8];
@@ -98,7 +65,7 @@ void read_boot_sector(int fd, boot_sector_t * bsector) {
 
 void read_data(int fd, DIR *diretorio,int pos){
 	lseek(fd,pos, SEEK_SET);
-	read(fd, &diretorio->DIR_Name,11);
+	read(fd, &diretorio->DIR_Name,8);
 	lseek(fd,pos+11, SEEK_SET);
 	read(fd, &diretorio->DIR_Attr,1);
 	lseek(fd,pos+26, SEEK_SET);
@@ -106,43 +73,83 @@ void read_data(int fd, DIR *diretorio,int pos){
 }
 
 
-void main(){
-	int imagem = open("../../fat16.img", O_RDWR);
-	printf("iniciando...\n");
-	boot_sector_t *bs = (boot_sector_t*) calloc(1,sizeof(boot_sector_t));
-	DIR *diretorio = (DIR*) calloc(1,sizeof(DIR));
-	read_boot_sector(imagem,bs);
-	printf("Numero de entadas diretorio raiz: %d\n",bs->root_entries);
-	int dir_raiz = (bs->number_of_fats * bs->fat_sz) + 1;
-	printf("sectors_per_cluster%d\n",bs->sectors_per_cluster);
 
+void copy_file(){
 
-	int root = ((bs->root_entries * 32) + (bs->bytes_per_sector -1))/bs->bytes_per_sector;
-	int first_data_sector = bs->reserved_sectors + (bs->number_of_fats * bs->fat_sz) + root;
-
-
-	printf("raiz: %d\n",dir_raiz);
-	printf("data:%d\n",first_data_sector);
-
-	int proximo = 32;
-
-	read_data(imagem,diretorio,512*dir_raiz);
-	printf("name:%s   ",diretorio->DIR_Name);
-	printf("First cluster:%d\n",diretorio->DIR_FstClusL);
-
-	while(diretorio->DIR_Attr == ATTR_DIRECTORY || diretorio->DIR_Attr == ATTR_ARCHIVE){
-		read_data(imagem,diretorio,512*dir_raiz+proximo);
-		printf("Name:%s   ",diretorio->DIR_Name);
-		printf("First cluster:%d\n",diretorio->DIR_FstClusL);
-		proximo+=32;
-	}
-
-
-	int fl = 157 * 512;
-	read_data(imagem,diretorio,fl+64);
-	printf("Name:%s   ",diretorio->DIR_Name);
-	printf("First cluster:%d\n",diretorio->DIR_FstClusL);
-
-	
 
 }
+
+
+void open_diretory(int fd, char *path, int nextpath, int sector){
+	// Copy path name from folder path
+	
+	int i = 0;
+	char path_name[11];
+	while(path[nextpath]!='/' && path[nextpath]!='\0'){
+		path_name[i] = path[nextpath];
+		nextpath++;
+		i++;
+	}
+	path_name[i] = '\n';
+	printf("PATH SEARCH: %s\n",path_name);
+	printf("DIRETORY LIST:\n");
+	
+	DIR *diretorio = (DIR*) calloc(1,sizeof(DIR));
+	
+	read_data(fd,diretorio,512*sector);
+	printf("%s\n",diretorio->DIR_Name);
+	
+	printf("%d\n",diretorio->DIR_NTRes);
+
+	int proximo = 32;
+	
+	while(diretorio->DIR_Attr == ATTR_DIRECTORY || diretorio->DIR_Attr == ATTR_ARCHIVE){
+		if(strncmp(path_name,diretorio->DIR_Name,3) == 0){
+			// verify if dir name is atual directory 
+			if(diretorio->DIR_Attr == ATTR_DIRECTORY){
+				open_diretory(fd,path,nextpath+1,153+(4*(diretorio->DIR_FstClusL-2)));
+				free(diretorio);
+				return;
+			}if(diretorio->DIR_Attr == ATTR_ARCHIVE){
+				copy_file();
+				printf("Arquivo encontrado\n");
+				free(diretorio);
+				return;
+			}
+		}
+		if(diretorio->DIR_FstClusL != 0xFFFF){
+			read_data(fd,diretorio,512*sector+proximo);
+			printf("%s\n",diretorio->DIR_Name);
+			proximo+=32;
+		}else{
+			printf("Arquivo nao encontrado2\n");
+			free(diretorio);
+			return;
+		}
+
+	}
+			
+}
+
+
+void main(int argc, char *argv[]){
+	char path[30];
+	printf("\e[H\e[2J");
+
+	// Open disk image:
+	int imagem = open("../../fat16.img", O_RDWR);
+	printf("iniciando...\n");
+	
+	// Read boot sector:
+	boot_sector_t *bs = (boot_sector_t*) calloc(1,sizeof(boot_sector_t));
+	read_boot_sector(imagem,bs);
+	int dir_raiz = (bs->number_of_fats * bs->fat_sz) + 1;
+	int root = ((bs->root_entries * 32) + (bs->bytes_per_sector -1))/bs->bytes_per_sector;
+	int first_data_sector = bs->reserved_sectors + (bs->number_of_fats * bs->fat_sz) + root;
+	// Search file in path:
+	
+	strcpy(path,argv[1]);
+	open_diretory(imagem,path,0,dir_raiz);
+
+}
+
