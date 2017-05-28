@@ -2,6 +2,7 @@
 #define SECTOR_H
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -20,8 +21,6 @@ typedef struct directory_entry DIR;
 typedef struct Buffer BUFFER;
 
 
-int copyVar =0;
-char output_file_dir[] = "../../new_file.txt"; //Output to copy file
 
 
 // FAT16 STRUCTURES
@@ -43,7 +42,7 @@ struct directory_entry{
 };
 
 typedef struct {
-	char fat_name[8];
+	char fat_name[8]; 
 	size_t bytes_per_sector;
     size_t sectors_per_cluster;
     size_t reserved_sectors;

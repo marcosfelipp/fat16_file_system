@@ -1,46 +1,48 @@
-#include <errno.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdint.h>
+// #include <errno.h>
+// #include <stdlib.h>
+// #include <stdio.h>
+// #include <string.h>
+// #include <stdint.h>
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
+// #include <sys/types.h>
+// #include <sys/stat.h>
+// #include <unistd.h>
 
-#define FUSE_USE_VERSION 26
-#include <fuse.h>
+// #define FUSE_USE_VERSION 26
+// #include <fuse.h>
 
 #include "sector.h"
-#include "log.h"
+// #include "log.h"
 
-// -----------------------------------------------------------------------------
+// // -----------------------------------------------------------------------------
 
-void *fat16_init(struct fuse_conn_info *conn)
-{
-  log_msg("Chamando init\n");
+// void *fat16_init(struct fuse_conn_info *conn)
+// {
+//   log_msg("Chamando init\n");
 
-  // Your code here
+//   // Your code here
 
-  return NULL;
-}
+//   return NULL;
+// }
 
-void fat16_destroy(void *data)
-{
-  log_msg("Chamando destroy\n");
+// void fat16_destroy(void *data)
+// {
+//   log_msg("Chamando destroy\n");
 
-  // Your code here
-}
+//   // Your code here
+// }
 
-//------------------------------------------------------------------------------
+// //------------------------------------------------------------------------------
 
-struct fuse_operations fat16_oper = {
-  .init       = fat16_init,
-  .destroy    = fat16_destroy
-};
+// struct fuse_operations fat16_oper = {
+//   .init       = fat16_init,
+//   .destroy    = fat16_destroy
+// };
 
 
-//------------------------------------------------------------------------------
+// //------------------------------------------------------------------------------
+
+
 
 
 
@@ -73,7 +75,7 @@ int main(int argc, char *argv[])
 	}else 
 		//Copy file of path to other place:
 		if(strcmp(command,"copy") == 0){
-			copyVar = 1; // copyVar is a global variable that define copy command, by default that is 0 and set here to 1
+			// copyVar = 1; // copyVar is a global variable that define copy command, by default that is 0 and set here to 1
 			open_diretory(imagem,path,0,dir_raiz);
 	}	
 

@@ -11,7 +11,6 @@ typedef struct Buffer BUFFER;
 
 
 int copyVar =0;
-char output_file_dir[] = "../../new_file.txt";
 
 #define ATTR_READ_ONLY 0x01
 #define ATTR_HIDDEN 0x02
@@ -122,7 +121,6 @@ void open_diretory(int fd, char *path, int nextpath, int sector){
 		i++;
 	}
 	path_name[i] = '\n';
-	printf("PATH SEARCH: %s\n",path_name);
 	printf("DIRETORY LIST:\n");
 	
 	DIR *diretorio = (DIR*) calloc(1,sizeof(DIR));
