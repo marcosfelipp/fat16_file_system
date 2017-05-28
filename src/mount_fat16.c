@@ -16,11 +16,6 @@
 
 // -----------------------------------------------------------------------------
 
-
-
-
-//------------------------------------------------------------------------------
-
 void *fat16_init(struct fuse_conn_info *conn)
 {
   log_msg("Chamando init\n");
@@ -47,37 +42,40 @@ struct fuse_operations fat16_oper = {
 
 //------------------------------------------------------------------------------
 
+
+
 int main(int argc, char *argv[])
 {
-  int ret;
-  char command[5];
-  char path[20];
+	char path[30]; 
+	char command[10];
+	printf("\e[H\e[2J");
+	strcpy(command,argv[1]);
+	strcpy(path,argv[2]);
 
-  log_open();
-  // ret = fuse_main(argc, argv, &fat16_oper, NULL);
-  log_msg("ret: %d\n", ret);
+	// Open disk image: (Write Only mode)
+	int imagem = open("../../fat16.img", O_RDWR);
+	printf("iniciando...\n");
 
-  // Open image:
-  int imagem = open("../../fat16.img", O_RDWR);
-  if(filedesc < 0){
-    log_msg("Error: File not found\n EXITING...\n");
-    exit(0);
-  }
-  //---------------
-  // PREPARE FILE SYSTEM, READ BOOT SECTOR:
-  BPB *bs = (boot_sector_t*) calloc(1,sizeof(boot_sector_t));
-  read_boot_sector(imagem,bs);
-	log_msg("Starting\n");
+	
+	// Read boot sector(First sector)
+	boot_sector_t *bs = (boot_sector_t*) calloc(1,sizeof(boot_sector_t));
+	read_boot_sector(imagem,bs);
+	
+
+	int dir_raiz = (bs->number_of_fats * bs->fat_sz) + 1;
+	int root = ((bs->root_entries * 32) + (bs->bytes_per_sector -1))/bs->bytes_per_sector;
+	int first_data_sector = bs->reserved_sectors + (bs->number_of_fats * bs->fat_sz) + root;
+	
+	
+	// List diretory:
+	if(strcmp(command,"list") == 0){
+		open_diretory(imagem,path,0,dir_raiz);
+	}else 
+		//Copy file of path to other place:
+		if(strcmp(command,"copy") == 0){
+			copyVar = 1; // copyVar is a global variable that define copy command, by default that is 0 and set here to 1
+			open_diretory(imagem,path,0,dir_raiz);
+	}	
+
   
- 	strcpy(command,argv[0]);
- 	strcpy(path,argv[1]);
- 	CONTROL *control = (CONTROL*) calloc(1,sizeof(CONTROL));
-
- 	control->root_entry= ((bs->root_entries * 32) + (bs->bytes_per_sector -1))/bs->bytes_per_sector;
-	control->first_data_sector = bs->reserved_sectors + (bs->number_of_fats * bs->fat_sz) + root;
-
-	go_to_path();
-  
-
-  // return ret;
 }

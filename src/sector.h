@@ -8,41 +8,41 @@
 #include <sys/stat.h>
 #include <string.h>
 
-typedef struct directory_entry DIR;
-typedef struct boot_sector_t BPB;
-typedef struct buffer BUFFER;
-typedef struct controller CONTROL;
+// Directory definitions constants
+#define ATTR_READ_ONLY 0x01
+#define ATTR_HIDDEN 0x02
+#define ATTR_SYSTEM 0x04
+#define ATTR_VOLUME_ID 0x08
+#define ATTR_DIRECTORY 0x10
+#define ATTR_ARCHIVE 0x20
 
-struct buffer{	
-	char data[512];
-};
+typedef struct directory_entry DIR;
+typedef struct Buffer BUFFER;
+
+
+int copyVar =0;
+char output_file_dir[] = "../../new_file.txt"; //Output to copy file
+
 
 // FAT16 STRUCTURES
 // --------------------------------------------------------------------------------------
 
-// Structure for store the root entry and first data sector
-struct controller{
-	int root_entry;
-	int fist_data_sector;
-};
-
 struct directory_entry{
 	char DIR_Name[11]; //“Short”  file  name  limited  to  11  characters
 	char DIR_Attr;
-	char DIR_NTRes; 
+	char DIR_NTRes; //Reserved. Must be set to 0.
 	char DIR_CrtTimeTenth;
-	size_t DIR_CrtTime; //Creation time. Granularity is 2 seconds.
-	size_t DIR_CrtDate;
-	size_t DIR_LstAccDat; //Last access date.
-	size_t DIR_FstClusH;
-	size_t DIR_WrtTime;
-	size_t DIR_WrtDate;
+	char DIR_CrtTime[2]; //Creation time
+	char DIR_CrtDate[2];
+	char DIR_LstAccDat[2]; //Last access date.
+	char DIR_FstClusH[2];
+	char DIR_WrtTime [2];
+	char DIR_WrtDate[2];
 	size_t DIR_FstClusL;
-	int DIR_FileSize; //32-bit  quantity  containing  size  in  bytes  of file/directory described by this entry.
+	char DIR_FileSize[4]; //32-bit  quantity  containing  size  in  bytes  of file/directory described by this entry.
 };
 
-// Structure for store the boot sector
-typedef struct boot_sector_t{
+typedef struct {
 	char fat_name[8];
 	size_t bytes_per_sector;
     size_t sectors_per_cluster;
@@ -51,14 +51,22 @@ typedef struct boot_sector_t{
     size_t root_entries;
     size_t sectors_per_fat;
 	size_t fat_sz;
-} ;
+} boot_sector_t;
 
 
 // --------------------------------------------------------------------------------------
 
+struct Buffer{
+	char data[2048];
+};
 
-void sector_read(int fd, unsigned int secnum, BUFFER *buffer,int buffer_sz);
-void read_data(int fd, DIR *diretorio,int pos);
+// FUNCTIONS DEFINITIONS
+// --------------------------------------------------------------------------------------
+
 void read_boot_sector(int fd, boot_sector_t * bsector);
+void read_data(int fd, DIR *diretorio,int pos);
+void sector_read(int fd, unsigned int secnum, BUFFER *buffer,int buffer_sz);
+void copy_file(int fd,int cluster);
+void open_diretory(int fd, char *path, int nextpath, int sector);
 
 #endif

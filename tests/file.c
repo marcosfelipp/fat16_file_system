@@ -7,7 +7,11 @@
 #include <string.h>
 typedef struct directory_entry DIR;
 typedef struct bpb BPB;
+typedef struct Buffer BUFFER;
 
+
+int copyVar =0;
+char output_file_dir[] = "../../new_file.txt";
 
 #define ATTR_READ_ONLY 0x01
 #define ATTR_HIDDEN 0x02
@@ -22,7 +26,7 @@ struct directory_entry{
 	char DIR_Attr;
 	char DIR_NTRes; //Reserved. Must be set to 0.
 	char DIR_CrtTimeTenth;
-	char DIR_CrtTime[2]; //Creation time. Granularity is 2 seconds.
+	char DIR_CrtTime[2]; //Creation time
 	char DIR_CrtDate[2];
 	char DIR_LstAccDat[2]; //Last access date.
 	char DIR_FstClusH[2];
@@ -42,6 +46,11 @@ typedef struct {
     size_t sectors_per_fat;
 	size_t fat_sz;
 } boot_sector_t;
+
+
+struct Buffer{
+	char data[2048];
+};
 
 void read_boot_sector(int fd, boot_sector_t * bsector) {
 	lseek(fd, 3, SEEK_SET);
@@ -72,10 +81,32 @@ void read_data(int fd, DIR *diretorio,int pos){
 	read(fd, &diretorio->DIR_FstClusL,2);
 }
 
+void sector_read(int fd, unsigned int secnum, BUFFER *buffer,int buffer_sz)
+{
+  int sector = secnum * buffer_sz;
+  lseek(fd,secnum, SEEK_SET);
+  read(fd, &buffer->data,buffer_sz);
+}
 
-
-void copy_file(){
-
+// Function receive a sector number of frist sector of a FILE and copy for diretory out of FAT
+void copy_file(int fd,int cluster){
+	// Open output file to record data:
+	BUFFER *buffer = (BUFFER*)calloc(1,sizeof(BUFFER));
+	int buffer_sz = 2048;
+	int output = open(output_file_dir,O_WRONLY);
+	printf("Primeiro CLuster data: %d\n",cluster);
+	// Read cluster adress while file 
+	while(cluster != 0xFFFF){
+		printf("lendo cluster\n");
+		sector_read(fd,(153+4*(cluster-2))*512,buffer,buffer_sz);
+		write(output,&buffer->data,sizeof(buffer->data));
+		printf("%s\n",buffer->data);
+		cluster = 512 + cluster*2;
+		lseek(fd,cluster, SEEK_SET);
+		read(fd, &cluster,2);
+    	printf("CLuster:%d\n",cluster);
+	}
+	free(buffer);
 
 }
 
@@ -111,8 +142,11 @@ void open_diretory(int fd, char *path, int nextpath, int sector){
 				free(diretorio);
 				return;
 			}if(diretorio->DIR_Attr == ATTR_ARCHIVE){
-				copy_file();
 				printf("Arquivo encontrado\n");
+				printf("CLuster: %d\n",diretorio->DIR_FstClusL);
+				// Se usuario definiu que quer copiar o arquivo:
+				if(copyVar == 1)
+					copy_file(fd,diretorio->DIR_FstClusL);
 				free(diretorio);
 				return;
 			}
@@ -123,6 +157,7 @@ void open_diretory(int fd, char *path, int nextpath, int sector){
 			proximo+=32;
 		}else{
 			printf("Arquivo nao encontrado2\n");
+			printf("CLuster: %d\n",diretorio->DIR_FstClusL);
 			free(diretorio);
 			return;
 		}
@@ -134,8 +169,9 @@ void open_diretory(int fd, char *path, int nextpath, int sector){
 
 void main(int argc, char *argv[]){
 	char path[30];
+	char command[10];
 	printf("\e[H\e[2J");
-
+	char output[] = "../";
 	// Open disk image:
 	int imagem = open("../../fat16.img", O_RDWR);
 	printf("iniciando...\n");
@@ -143,13 +179,26 @@ void main(int argc, char *argv[]){
 	// Read boot sector:
 	boot_sector_t *bs = (boot_sector_t*) calloc(1,sizeof(boot_sector_t));
 	read_boot_sector(imagem,bs);
+	
 	int dir_raiz = (bs->number_of_fats * bs->fat_sz) + 1;
 	int root = ((bs->root_entries * 32) + (bs->bytes_per_sector -1))/bs->bytes_per_sector;
 	int first_data_sector = bs->reserved_sectors + (bs->number_of_fats * bs->fat_sz) + root;
-	// Search file in path:
 	
-	strcpy(path,argv[1]);
-	open_diretory(imagem,path,0,dir_raiz);
+	// Search file in path:
+	strcpy(command,argv[1]);
+	// List diretory
+	if(strcmp(command,"list") == 0){
+		strcpy(path,argv[2]);
+		open_diretory(imagem,path,0,dir_raiz);
+	}else 
+		//Copy file of path to other place 
+		if(strcmp(command,"copy") == 0){
+			copyVar = 1;
+			strcpy(path,argv[2]);
+			open_diretory(imagem,path,0,dir_raiz);
+	}	
+
+	
 
 }
 
