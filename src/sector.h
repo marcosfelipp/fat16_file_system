@@ -31,12 +31,12 @@ struct directory_entry{
 	char DIR_Attr;
 	char DIR_NTRes; //Reserved. Must be set to 0.
 	char DIR_CrtTimeTenth;
-	char DIR_CrtTime[2]; //Creation time
-	char DIR_CrtDate[2];
-	char DIR_LstAccDat[2]; //Last access date.
-	char DIR_FstClusH[2];
-	char DIR_WrtTime [2];
-	char DIR_WrtDate[2];
+	short int DIR_CrtTime; //Creation time
+	short int DIR_CrtDate;
+	short int DIR_LstAccDat; //Last access date.
+	short int DIR_FstClusH;
+	short int DIR_WrtTime ;
+	short int DIR_WrtDate;
 	size_t DIR_FstClusL;
 	char DIR_FileSize[4]; //32-bit  quantity  containing  size  in  bytes  of file/directory described by this entry.
 };
@@ -66,6 +66,6 @@ void read_boot_sector(int fd, boot_sector_t * bsector);
 void read_data(int fd, DIR *diretorio,int pos);
 void sector_read(int fd, unsigned int secnum, BUFFER *buffer,int buffer_sz);
 void copy_file(int fd,int cluster);
-void open_diretory(int fd, char *path, int nextpath, int sector);
+void open_diretory(int fd, char *path, int nextpath, int sector,int *comando);
 
 #endif

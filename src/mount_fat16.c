@@ -50,13 +50,13 @@ int main(int argc, char *argv[])
 {
 	char path[30]; 
 	char command[10];
+	int comando;
 	printf("\e[H\e[2J");
 	strcpy(command,argv[1]);
 	strcpy(path,argv[2]);
 
 	// Open disk image: (Write Only mode)
 	int imagem = open("../../fat16.img", O_RDWR);
-	printf("iniciando...\n");
 
 	
 	// Read boot sector(First sector)
@@ -71,12 +71,13 @@ int main(int argc, char *argv[])
 	
 	// List diretory:
 	if(strcmp(command,"list") == 0){
-		open_diretory(imagem,path,0,dir_raiz);
+		comando = 0;
+		open_diretory(imagem,path,0,dir_raiz,&comando);
 	}else 
 		//Copy file of path to other place:
 		if(strcmp(command,"copy") == 0){
-			// copyVar = 1; // copyVar is a global variable that define copy command, by default that is 0 and set here to 1
-			open_diretory(imagem,path,0,dir_raiz);
+			comando = 1;
+			open_diretory(imagem,path,0,dir_raiz,&comando);
 	}	
 
   
