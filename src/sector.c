@@ -3,44 +3,12 @@
 char output_file_dir[] = "../../new_file.txt"; //Output to copy file
 int copyVar =0;
 
-void read_boot_sector(int fd, boot_sector_t * bsector) {
-	lseek(fd, 3, SEEK_SET);
-	read(fd, &bsector->fat_name, 8);
-	lseek(fd, 11, SEEK_SET);
-    read(fd, &bsector->bytes_per_sector, 2);
-    lseek(fd, 13, SEEK_SET);
-    read(fd, &bsector->sectors_per_cluster, 1);
-    lseek(fd, 14, SEEK_SET);
-    read(fd, &bsector->reserved_sectors, 2);
-    lseek(fd, 16, SEEK_SET);
-    read(fd, &bsector->number_of_fats, 1);
-    lseek(fd, 17, SEEK_SET);
-    read(fd, &bsector->root_entries, 2);
-    lseek(fd, 19, SEEK_SET);
-    read(fd, &bsector->sectors_per_fat, 2);
-	lseek(fd, 22, SEEK_SET);
-    read(fd, &bsector->fat_sz, 2);
 
-}
 
-void read_data(int fd, DIR *diretorio,int pos){
-	lseek(fd,pos, SEEK_SET);
-	read(fd, &diretorio->DIR_Name,8);
-	lseek(fd,pos+11, SEEK_SET);
-	read(fd, &diretorio->DIR_Attr,1);
-	lseek(fd,pos+14, SEEK_SET);
-	read(fd, &diretorio->DIR_CrtTime,2);
-	lseek(fd,pos+16, SEEK_SET);
-	read(fd, &diretorio->DIR_CrtDate,2);
-	lseek(fd,pos+26, SEEK_SET);
-	read(fd, &diretorio->DIR_FstClusL,2);
-}
-
-void sector_read(int fd, unsigned int secnum, BUFFER *buffer,int buffer_sz)
+void sector_read(int fd, unsigned int secnum, void *buffer,int buffer_sz)
 {
-  int sector = secnum * buffer_sz;
   lseek(fd,secnum, SEEK_SET);
-  read(fd, &buffer->data,buffer_sz);
+  read(fd,buffer,buffer_sz);
 }
 
 
@@ -65,12 +33,14 @@ void copy_file(int fd,int cluster){
 }
 
 void list_diretory(int fd,int sector){
+	printf("\n");
 	DIR *diretorio = (DIR*) calloc(1,sizeof(DIR));
-	read_data(fd,diretorio,512*sector);
+	sector_read(fd,512*sector,diretorio,sizeof(DIR));
+	// read_data(fd,diretorio,512*sector);
 	int proximo = 32;
 	while(diretorio->DIR_Attr == ATTR_DIRECTORY || diretorio->DIR_Attr == ATTR_ARCHIVE){
 		printf("%s   -    %d    -    %d  \n",diretorio->DIR_Name,diretorio->DIR_CrtDate,diretorio->DIR_CrtTime);
-		read_data(fd,diretorio,512*sector+proximo);
+		sector_read(fd,512*sector+proximo,diretorio,sizeof(DIR));
 		proximo+=32;
 	}
 	free(diretorio);
@@ -90,7 +60,7 @@ void open_diretory(int fd, char *path, int nextpath, int sector,int *comando){
 
 	// Aloca diretório:
 	DIR *diretorio = (DIR*) calloc(1,sizeof(DIR));
-	read_data(fd,diretorio,512*sector);
+	sector_read(fd,512*sector,diretorio,sizeof(DIR));
 
 	int proximo = 32;
 	while(diretorio->DIR_Attr == ATTR_DIRECTORY || diretorio->DIR_Attr == ATTR_ARCHIVE){
@@ -122,7 +92,7 @@ void open_diretory(int fd, char *path, int nextpath, int sector,int *comando){
 		}
 		// If alhead have directory ou files in this diretory:
 		if(diretorio->DIR_FstClusL != 0xFFFF){
-			read_data(fd,diretorio,512*sector+proximo);
+			sector_read(fd,512*sector+proximo,diretorio,sizeof(DIR));
 			proximo+=32;
 		}else{
 			printf("Arquivo nao encontrado2\n");

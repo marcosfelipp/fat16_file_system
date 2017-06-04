@@ -61,8 +61,8 @@ int main(int argc, char *argv[])
 	
 	// Read boot sector(First sector)
 	boot_sector_t *bs = (boot_sector_t*) calloc(1,sizeof(boot_sector_t));
-	read_boot_sector(imagem,bs);
-	
+	// read_boot_sector(imagem,bs);
+	sector_read(imagem,0,bs,sizeof(boot_sector_t));
 
 	int dir_raiz = (bs->number_of_fats * bs->fat_sz) + 1;
 	int root = ((bs->root_entries * 32) + (bs->bytes_per_sector -1))/bs->bytes_per_sector;

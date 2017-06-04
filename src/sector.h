@@ -19,7 +19,7 @@
 
 typedef struct directory_entry DIR;
 typedef struct Buffer BUFFER;
-
+typedef struct root boot_sector_t;
 
 
 
@@ -39,18 +39,20 @@ struct directory_entry{
 	short int DIR_WrtDate;
 	size_t DIR_FstClusL;
 	char DIR_FileSize[4]; //32-bit  quantity  containing  size  in  bytes  of file/directory described by this entry.
-};
+}__attribute__((packed, aligned(1)));
 
-typedef struct {
+struct root {
+	char jmp_boot[3];
 	char fat_name[8]; 
-	size_t bytes_per_sector;
-    size_t sectors_per_cluster;
-    size_t reserved_sectors;
-    size_t number_of_fats;
-    size_t root_entries;
-    size_t sectors_per_fat;
-	size_t fat_sz;
-} boot_sector_t;
+	unsigned short int bytes_per_sector;
+    char sectors_per_cluster;
+    unsigned short int reserved_sectors;
+    char number_of_fats;
+    unsigned short int root_entries;
+    unsigned short sectors_per_fat;
+	char media;
+	unsigned short fat_sz;
+}__attribute__((packed, aligned(1)));
 
 
 // --------------------------------------------------------------------------------------
@@ -62,9 +64,7 @@ struct Buffer{
 // FUNCTIONS DEFINITIONS
 // --------------------------------------------------------------------------------------
 
-void read_boot_sector(int fd, boot_sector_t * bsector);
-void read_data(int fd, DIR *diretorio,int pos);
-void sector_read(int fd, unsigned int secnum, BUFFER *buffer,int buffer_sz);
+void sector_read(int fd, unsigned int secnum, void *buffer,int buffer_sz);
 void copy_file(int fd,int cluster);
 void open_diretory(int fd, char *path, int nextpath, int sector,int *comando);
 
